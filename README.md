@@ -1,3 +1,4 @@
+[README.md](https://github.com/user-attachments/files/32982610/README.md)
 # HMGA1 and the immune microenvironment of IDH-wildtype glioblastoma
 
 Reproducible analysis pipeline for:
@@ -25,12 +26,12 @@ R 4.6.0 with TCGAbiolinks 2.40.0, SummarizedExperiment, dplyr, stringr, survival
 
 ## Run
 ```r
-setwd("path/to/project")                           # folder containing share/ and scripts/
+setwd("path/to/project")               # folder containing share/ and scripts/
 source("scripts/00a_download_and_prepare_data.R")  # once: TCGA download (~3 GB) and CGGA preparation
 source("scripts/00b_microenvironment_scores.R")    # once: ESTIMATE and MCP-counter scores
-source("scripts/run_all.R")                        # scripts 01-08; writes results/run_log.txt
-source("scripts/09_manuscript_numbers.R")          # Table 1 numbers
-source("scripts/10_supplementary_tables.R")        # Supplementary Tables S1-S5
+source("scripts/run_all.R")            # scripts 01-08 and 11; writes results/run_log.txt
+source("scripts/09_manuscript_numbers.R")   # Table 1 numbers
+source("scripts/10_supplementary_tables.R") # Supplementary Tables S1-S5
 ```
 
 | Script | Content |
@@ -42,12 +43,13 @@ source("scripts/10_supplementary_tables.R")        # Supplementary Tables S1-S5
 | 02_expression_survival.R | proliferation coupling, Cox and Kaplan–Meier (Figure 1) |
 | 03_immune_composition.R | H4: immune/stromal composition (Figure 2) |
 | 04_mechanism_axes.R | H1–H2: CCL2, TAMs, STING/interferon (Figure 3) |
-| 05_checkpoints_subtype.R | H3: checkpoints, CD276, subtype (Figure 4) |
+| 05_checkpoints_subtype.R | H3: checkpoints, CD276, subtype, EZH2 check (Figure 4) |
 | 06_single_cell_TISCH2.R | TISCH2 cross-check (Supplementary Figure S2) |
 | 07_neftel_single_cell.R | single-cell analysis (Figure 5) |
 | 08_all_grades_reconciliation.R | all-grade survival with MKI67 control (post hoc; Supplementary Figure S6) |
 | 09_manuscript_numbers.R | Table 1 |
 | 10_supplementary_tables.R | Supplementary Tables S1–S5 |
+| 11_tam_restricted_signatures.R | TAM-ontogeny signatures restricted to myeloid-specific genes (post hoc) |
 
 Outputs: `results/` (tables, logs) and `figures/` (PDF and PNG).
 
