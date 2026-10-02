@@ -123,11 +123,13 @@ if (requireNamespace("msigdbr", quietly = TRUE)) {
 
 # Mueller et al. 2017 TAM ontogeny signatures -> TAM_microglia, TAM_macrophage
 # Scored as in Mueller et al.: average of z-scored genes of each signature.
+muller_expr <- list()
 if (file.exists(MULLER_FILE)) {
   gsets <- read_sets(MULLER_FILE); names(gsets) <- tolower(names(gsets))
   if (!all(c("microglia", "macrophage") %in% names(gsets))) stop("muller2017 file must contain microglia and macrophage sets")
   for (k in names(cohorts)) {
     m <- log2(expr_mats[[k]][, cohorts[[k]]$sample] + 1)
+    muller_expr[[k]] <- m[intersect(unlist(gsets), rownames(m)), , drop = FALSE]   # used by script 11
     for (n in c("microglia", "macrophage")) {
       g <- intersect(gsets[[n]], rownames(m)); g <- g[apply(m[g, , drop = FALSE], 1, var) > 0]
       cohorts[[k]][[paste0("TAM_", n)]] <- colMeans(t(scale(t(m[g, , drop = FALSE]))))
@@ -136,7 +138,7 @@ if (file.exists(MULLER_FILE)) {
   }
 } else say("  NOTE: %s not found -> microglia/blood-derived TAM split skipped.", MULLER_FILE)
 
-saveRDS(list(cohorts = cohorts, tcga_normals = normals), file.path(RES_DIR, "cohorts_hmga1.rds"))
+saveRDS(list(cohorts = cohorts, tcga_normals = normals, muller_expr = muller_expr), file.path(RES_DIR, "cohorts_hmga1.rds"))
 
 cat("\n---- Cohort summary ----\n")
 for (k in names(cohorts)) {

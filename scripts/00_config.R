@@ -89,9 +89,13 @@ meta_r <- function(r, n, k = 0) {
   z <- atanh(r); w <- n - 3 - k
   zp <- sum(w * z) / sum(w); se <- 1 / sqrt(sum(w))
   Q  <- sum(w * (z - zp)^2); df <- length(r) - 1
+  # random-effects sensitivity (DerSimonian-Laird)
+  tau2 <- if (df > 0) max(0, (Q - df) / (sum(w) - sum(w^2) / sum(w))) else 0
+  wr <- 1 / (1 / w + tau2); zr <- sum(wr * z) / sum(wr); ser <- 1 / sqrt(sum(wr))
   c(r = tanh(zp), lo = tanh(zp - 1.96 * se), hi = tanh(zp + 1.96 * se),
     p = 2 * pnorm(-abs(zp / se)), Q_p = pchisq(Q, df, lower.tail = FALSE),
-    I2 = ifelse(Q > 0, max(0, (Q - df) / Q), 0))
+    I2 = ifelse(Q > 0, max(0, (Q - df) / Q), 0),
+    r_RE = tanh(zr), lo_RE = tanh(zr - 1.96 * ser), hi_RE = tanh(zr + 1.96 * ser), p_RE = 2 * pnorm(-abs(zr / ser)))
 }
 
 # ---------------------------------------------------------------------
@@ -157,7 +161,7 @@ assoc_one <- function(cohorts, x, y, Z) {
   if (is.null(per) || nrow(per) == 0) return(NULL)
   k <- length(Z)
   m <- meta_r(per$r, per$n, k)
-  if (nrow(per) == 1) { m["p"] <- per$p; m["I2"] <- NA; m["Q_p"] <- NA }
+  if (nrow(per) == 1) { m["p"] <- per$p; m["I2"] <- NA; m["Q_p"] <- NA; m[c("r_RE", "lo_RE", "hi_RE", "p_RE")] <- NA }
   list(per = per, pooled = m, same_dir = length(unique(sign(per$r))) == 1)
 }
 
@@ -171,7 +175,9 @@ assoc_table <- function(cohorts, x, outcomes, models, family) {
     row <- data.frame(family = family, outcome = y, model = mn, k = length(Z),
                       n_cohorts = nrow(a$per), n_total = sum(a$per$n),
                       r_pooled = a$pooled[["r"]], lo = a$pooled[["lo"]], hi = a$pooled[["hi"]],
-                      p_pooled = a$pooled[["p"]], I2 = a$pooled[["I2"]], same_direction = a$same_dir)
+                      p_pooled = a$pooled[["p"]], I2 = a$pooled[["I2"]], same_direction = a$same_dir,
+                      r_RE = a$pooled[["r_RE"]], lo_RE = a$pooled[["lo_RE"]], hi_RE = a$pooled[["hi_RE"]],
+                      p_RE = a$pooled[["p_RE"]])
     for (i in seq_len(nrow(a$per))) {
       row[[paste0("r_", a$per$cohort[i])]] <- a$per$r[i]
       row[[paste0("p_", a$per$cohort[i])]] <- a$per$p[i]
@@ -192,9 +198,10 @@ print_assoc <- function(tab) {
     per <- paste(sapply(c("TCGA","CGGA_325","CGGA_693"), function(k) {
       rk <- t[[paste0("r_", k)]]; if (is.null(rk) || is.na(rk)) "   -  " else sprintf("%6.2f", rk)
     }), collapse = " ")
-    say("%-16s %-22s | %s | pooled r = %5.2f [%5.2f, %5.2f]  q = %-7s I2 = %3s%%  %s",
+    say("%-16s %-22s | %s | pooled r = %5.2f [%5.2f, %5.2f]  q = %-7s I2 = %3s%%  %s%s",
         t$outcome, t$model, per, t$r_pooled, t$lo, t$hi, fmt_p(t$q_pooled),
-        ifelse(is.na(t$I2), " NA", sprintf("%3.0f", 100 * t$I2)), ifelse(isTRUE(t$robust), "ROBUST", ""))
+        ifelse(is.na(t$I2), " NA", sprintf("%3.0f", 100 * t$I2)), ifelse(isTRUE(t$robust), "ROBUST", ""),
+        ifelse(!is.na(t$I2) && t$I2 >= 0.5, sprintf("  [RE r = %.2f (%.2f, %.2f)]", t$r_RE, t$lo_RE, t$hi_RE), ""))
   }
 }
 

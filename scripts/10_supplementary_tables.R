@@ -14,9 +14,10 @@ rnd <- function(dt) { dt <- as.data.frame(dt)
 
 # ---- S1: all association results ----
 s1 <- rbind(rd("T3_H4_immune_composition.csv"), rd("T4_H1_H2_mechanism_axes.csv"), rd("T5_H3_checkpoints.csv"),
-            rd("T5b_HMGA1_vs_subtype_scores.csv"), rd("T5d_CD276_sensitivity.csv"), fill = TRUE)
+            rd("T5b_HMGA1_vs_subtype_scores.csv"), rd("T5d_CD276_sensitivity.csv"),
+            if (file.exists(file.path(RES_DIR, "T11_tam_restricted.csv"))) rd("T11_tam_restricted.csv"), fill = TRUE)
 s1$model_description <- unname(c(MODEL_LABELS, M3b_TCGA_labels = "+ prolif + ESTIMATE + subtype labels (TCGA)")[s1$model])
-s1$post_hoc <- s1$model %in% c("M7_vascular_stromal") | s1$outcome %in% c("TAM_microglia", "TAM_macrophage")
+s1$post_hoc <- s1$model %in% c("M7_vascular_stromal") | grepl("^TAM_", s1$outcome)
 setcolorder(s1, c("family", "outcome", "model", "model_description", "post_hoc"))
 
 # ---- S2: survival ----
@@ -30,6 +31,7 @@ s3c <- rd("T7e_neftel_targets_by_class.csv")
 s3d <- rd("T7d_neftel_within_malignant.csv")
 s3e <- rd("T7f_neftel_malignant_pseudobulk.csv")
 s3f <- rd("T6_TISCH2_Neftel_Smartseq2.csv")
+s3g <- if (file.exists(file.path(RES_DIR, "T7g_muller_gene_specificity.csv"))) rd("T7g_muller_gene_specificity.csv") else data.table()
 
 # ---- S4: all-grade analysis ----
 s4 <- rd("T8_all_grades_reconciliation.csv")
@@ -58,9 +60,9 @@ add("Endothelial markers", c("PECAM1", "VWF", "CLDN5"), "This study")
 s5 <- rbindlist(gs)
 
 readme <- data.frame(Sheet = c("S1_associations", "S2a_proliferation_age", "S2b_cox", "S3a_cell_counts", "S3b_HMGA1_by_class",
-                               "S3c_targets_by_class", "S3d_within_malignant", "S3e_pseudobulk", "S3f_TISCH2", "S4_all_grades", "S5_gene_sets"),
+                               "S3c_targets_by_class", "S3d_within_malignant", "S3e_pseudobulk", "S3f_TISCH2", "S3g_TAM_gene_specificity", "S4_all_grades", "S5_gene_sets"),
   Content = c(
-    "Partial Spearman correlations of HMGA1 with all outcomes: per-cohort r, P and n; pooled fixed-effect r (95% CI), P, Benjamini-Hochberg q (within family and model), I2, direction consistency and robustness flag. Models M0-M7 as defined in Methods.",
+    "Partial Spearman correlations of HMGA1 with all outcomes: per-cohort r, P and n; pooled fixed-effect r (95% CI), P, Benjamini-Hochberg q (within family and model), I2, direction consistency, robustness flag and random-effects (DerSimonian-Laird) sensitivity estimates (r_RE, 95% CI, P). Models M0-M7 as defined in Methods.",
     "Spearman correlations of HMGA1 with proliferation score, MKI67 and age (per cohort and pooled).",
     "Cox models: HR per 1 SD log2 HMGA1, 95% CI, P, Schoenfeld tests, sensitivity models and pooled estimates.",
     "Neftel Smart-seq2 adult tumors: cells per tumor and class (Neftel markers, cutoff 4). Proportions reflect CD45 sorting.",
@@ -69,12 +71,13 @@ readme <- data.frame(Sheet = c("S1_associations", "S2a_proliferation_age", "S2b_
     "Within-malignant-cell correlations with HMGA1 per target, pooled across tumors (unadjusted and cell-cycle/complexity adjusted).",
     "Tumor-level malignant-cell pseudo-bulk correlations (n = 20 tumors).",
     "TISCH2 cell-type means for the Neftel Smart-seq2 dataset (independent cross-check).",
+    "Mueller TAM signature genes: mean expression and detection in myeloid vs malignant cells; myeloid-restricted flag (prespecified criterion).",
     "All-grade CGGA analysis (post hoc): HR per 1 SD HMGA1 and MKI67 (positive control) across sequential models; within-molecular-group estimates.",
     "All gene sets used, with sources."))
 
 out <- file.path(RES_DIR, "Supplementary_Tables_S1-S5.xlsx")
 writexl::write_xlsx(list(README = readme, S1_associations = rnd(s1), S2a_proliferation_age = rnd(s2a), S2b_cox = rnd(s2b),
                          S3a_cell_counts = rnd(s3a), S3b_HMGA1_by_class = rnd(s3b), S3c_targets_by_class = rnd(s3c),
-                         S3d_within_malignant = rnd(s3d), S3e_pseudobulk = rnd(s3e), S3f_TISCH2 = rnd(s3f),
+                         S3d_within_malignant = rnd(s3d), S3e_pseudobulk = rnd(s3e), S3f_TISCH2 = rnd(s3f), S3g_TAM_gene_specificity = rnd(s3g),
                          S4_all_grades = rnd(s4), S5_gene_sets = as.data.frame(s5)), out)
 say("Saved %s (S1: %d rows; S5: %d genes)", out, nrow(s1), nrow(s5))

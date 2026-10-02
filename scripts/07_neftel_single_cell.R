@@ -56,7 +56,9 @@ meta <- meta[grepl("Smartseq2", meta$file) & meta$age_group == "adult", ]
 say("Adult Smart-seq2: %d cells from %d tumors", nrow(meta), length(unique(meta$tumor)))
 
 # ---------------- expression subset (cached) ----------------
-want <- unique(c(TARGETS, unlist(MARKERS), PROLIF_GENES, unlist(neftel_mod)))
+muller_sets <- NULL
+if (file.exists(MULLER_FILE)) { w <- read.csv(MULLER_FILE, stringsAsFactors = FALSE); muller_sets <- split(trimws(w$gene), trimws(w$set)) }
+want <- unique(c(TARGETS, unlist(MARKERS), PROLIF_GENES, unlist(neftel_mod), unlist(muller_sets)))
 rebuild <- !file.exists(CACHE) || !all(want %in% readRDS(CACHE)$want)
 if (rebuild) {
   if (!file.exists(TSV)) {
@@ -193,6 +195,28 @@ tg <- rbindlist(lapply(TARGETS, function(g)
 cat("Mean log2(TPM/10+1):\n");   print(dcast(tg, gene ~ class, value.var = "mean"), digits = 2)
 cat("Fraction of cells with expression > 0:\n"); print(dcast(tg, gene ~ class, value.var = "detected"), digits = 2)
 fwrite(tg, file.path(RES_DIR, "T7e_neftel_targets_by_class.csv"))
+
+# ---------------- (a3) cell-type specificity of the Mueller TAM signature genes ----------------
+# Mueller et al. derived their signatures WITHIN sorted TAMs; in bulk tissue some genes are also
+# expressed by malignant or other cells. Prespecified criterion for a myeloid-restricted gene:
+# mean log2(TPM/10+1) in myeloid cells >= 1 unit above malignant cells AND detection in myeloid
+# cells >= 2x detection in malignant cells.
+if (!is.null(muller_sets)) {
+  cat("\n---- (a3) Mueller signature genes: myeloid vs malignant expression ----\n")
+  spec <- rbindlist(lapply(names(muller_sets), function(st) rbindlist(lapply(muller_sets[[st]], function(g) {
+    if (!g %in% rownames(L)) return(data.table(set = st, gene = g, in_data = FALSE))
+    v <- L[g, ]; my <- meta$class == "Myeloid"; ma <- meta$class == "Malignant"
+    data.table(set = st, gene = g, in_data = TRUE, mean_myeloid = mean(v[my]), mean_malignant = mean(v[ma]),
+               det_myeloid = mean(v[my] > 0), det_malignant = mean(v[ma] > 0))
+  }))), fill = TRUE)
+  spec[, myeloid_restricted := in_data & (mean_myeloid - mean_malignant >= 1) & (det_myeloid >= 2 * det_malignant)]
+  for (st in names(muller_sets)) {
+    x <- spec[set == st]
+    say("  %-10s %2d/%2d genes myeloid-restricted; not restricted: %s", st, sum(x$myeloid_restricted, na.rm = TRUE),
+        nrow(x), paste(x$gene[!x$myeloid_restricted %in% TRUE], collapse = ", "))
+  }
+  fwrite(spec, file.path(RES_DIR, "T7g_muller_gene_specificity.csv"))
+}
 
 # ---------------- (b2) between tumors, malignant cells only (pseudo-bulk) ----------------
 cat("\n---- (b2) Between tumors, malignant-cell pseudo-bulk (n = tumors; exploratory) ----\n")

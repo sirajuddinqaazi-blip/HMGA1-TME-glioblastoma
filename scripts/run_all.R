@@ -11,7 +11,8 @@ dir.create("results", showWarnings = FALSE)
 
 ALL <- c("01_cohorts.R", "02_expression_survival.R", "03_immune_composition.R",
          "04_mechanism_axes.R", "05_checkpoints_subtype.R", "06_single_cell_TISCH2.R",
-         "07_neftel_single_cell.R", "08_all_grades_reconciliation.R")
+         "07_neftel_single_cell.R", "08_all_grades_reconciliation.R",
+         "11_tam_restricted_signatures.R")
 if (!exists("STEPS")) STEPS <- substr(ALL, 1, 2)
 run <- ALL[substr(ALL, 1, 2) %in% STEPS]
 
