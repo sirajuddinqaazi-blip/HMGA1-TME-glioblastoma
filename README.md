@@ -1,11 +1,11 @@
-[README.md](https://github.com/user-attachments/files/32982610/README.md)
+[README.md](https://github.com/user-attachments/files/32990355/README.md)
 # HMGA1 and the immune microenvironment of IDH-wildtype glioblastoma
 
 Reproducible analysis pipeline for:
 
-> Siraj Ud Din, Sufiyan Sufiyan, Asif Ali Shah. *HMGA1* expression is associated with *CD276* (B7-H3) and a macrophage-rich microenvironment, but not with immune exclusion, in IDH-wildtype glioblastoma: a three-cohort and single-cell analysis. *International Journal of Cancer* (submitted).
+> Siraj Ud Din, Sufiyan Sufiyan, Sartaj Ud Din, Asif Ali Shah. *HMGA1* expression is associated with *CD276* (B7-H3) and a macrophage-rich microenvironment, but not with immune exclusion, in IDH-wildtype glioblastoma: a three-cohort and single-cell analysis. *International Journal of Cancer* (submitted).
 
-Archived version: https://doi.org/10.5281/zenodo.23091218
+Archived version: https://doi.org/10.5281/zenodo.23111620
 
 ## Overview
 Confounder-adjusted analysis of *HMGA1* in three IDH-wildtype primary glioblastoma cohorts (TCGA n = 160; CGGA_325 n = 74; CGGA_693 n = 109): partial Spearman correlations under prespecified adjustment models, fixed-effect meta-analysis (Fisher z, I²), Benjamini–Hochberg correction, Cox models, and single-cell localization in Neftel et al. 2019 (GSE131928, adult Smart-seq2 tumors).
@@ -54,7 +54,7 @@ source("scripts/10_supplementary_tables.R") # Supplementary Tables S1-S5
 Outputs: `results/` (tables, logs) and `figures/` (PDF and PNG).
 
 ## Citation
-Please cite the article and the archived code (https://doi.org/10.5281/zenodo.23091218).
+Please cite the article and the archived code (https://doi.org/10.5281/zenodo.23111620).
 
 ## License
 MIT License (see LICENSE file)
