@@ -3,7 +3,7 @@
 
 Reproducible analysis pipeline for:
 
-> Siraj Ud Din, Sufiyan Sufiyan, Sartaj Ud Din, Asif Ali Shah. *HMGA1* expression is associated with *CD276* (B7-H3) and a macrophage-rich microenvironment, but not with immune exclusion, in IDH-wildtype glioblastoma: a three-cohort and single-cell analysis. *International Journal of Cancer* (submitted).
+> Siraj Ud Din, Sartaj Ud Din. *HMGA1* expression is associated with *CD276* (B7-H3) and a macrophage-rich microenvironment, but not with immune exclusion, in IDH-wildtype glioblastoma: a three-cohort and single-cell analysis. *International Journal of Cancer* (submitted).
 
 Archived version: https://doi.org/10.5281/zenodo.23111620
 
