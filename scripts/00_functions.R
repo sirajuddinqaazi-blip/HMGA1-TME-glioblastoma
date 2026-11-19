@@ -21,7 +21,7 @@ suppressPackageStartupMessages({
   library(data.table); library(readxl)
 })
 
-if (!dir.exists("share")) stop("Folder 'share' not found. Run setwd('D:/Siraj_HMGA1') first.")
+if (!dir.exists("share")) stop("Folder 'share' not found. Set the working directory to the project folder (the folder containing share/ and scripts/) first.")
 set.seed(2026)
 DATA_DIR <- "share"
 RAW_DIR  <- file.path(DATA_DIR, "raw")

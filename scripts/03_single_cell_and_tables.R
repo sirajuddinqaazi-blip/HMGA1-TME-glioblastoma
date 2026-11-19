@@ -293,7 +293,7 @@ sec_neftel <- function() {
   ref <- meta$class %in% c("Myeloid", "T cell", "Oligodendrocyte")
   gch <- lapply(CHR_GENES, function(g) { g <- intersect(g, rownames(L)); g[rowMeans(L[g, , drop = FALSE]) >= 1] })
   say("Expressed genes used (mean log2(TPM/10+1) >= 1): chr7 %d, chr10 %d; reference cells %d", length(gch$chr7), length(gch$chr10), sum(ref))
-  if (min(lengths(gch)) < 30) stop("Too few expressed chr7/chr10 genes for the copy-number check; send the log to Claude.")
+  if (min(lengths(gch)) < 30) stop("Too few expressed chr7/chr10 genes for the copy-number check; check that org.Hs.eg.db is installed and that GSM3828672 is the full TPM matrix.")
   X <- L[c(gch$chr7, gch$chr10), , drop = FALSE]
   X <- X - rowMeans(X[, ref, drop = FALSE]); X <- pmin(pmax(X, -3), 3)
   meta$cnv <- colMeans(X[gch$chr7, , drop = FALSE]) - colMeans(X[gch$chr10, , drop = FALSE])
