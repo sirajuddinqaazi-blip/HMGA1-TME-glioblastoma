@@ -1,8 +1,18 @@
 # =====================================================================
-# 00_config.R
+# 00_functions.R
 # HMGA1 and the immune microenvironment of IDH-wildtype glioblastoma
 # Shared settings, gene sets, models and helper functions.
-# Sourced by every script. Working directory MUST be D:/Siraj_HMGA1
+# Sourced by 02_bulk_analyses.R and 03_single_cell_and_tables.R.
+# Working directory must be the project folder (the one containing share/).
+#
+# Changes vs. the previous 00_config.R:
+#  - meta_r(): adds Hartung-Knapp-Sidik-Jonkman (HKSJ) 95% CI and P around
+#    the DerSimonian-Laird random-effects estimate (columns lo_HK, hi_HK, p_HK).
+#    The modified HKSJ variance (never smaller than the DL variance) is used.
+#  - meta_generic(): the same fixed / DL / HKSJ pooling for log hazard ratios
+#    and other generic estimates.
+#  - run_logged(): runs analysis sections and writes a log file.
+#  All other functions are unchanged, so previous results reproduce exactly.
 # =====================================================================
 
 suppressPackageStartupMessages({
@@ -84,7 +94,8 @@ pspear <- function(x, y, Z = character(0), data) {
   c(n = n, r = rr, p = 2 * pt(-abs(tt), n - 2 - k))
 }
 
-# Fixed-effect meta-analysis of correlations (Fisher z)
+# Fixed-effect meta-analysis of correlations (Fisher z), with DerSimonian-Laird
+# random-effects and Hartung-Knapp-Sidik-Jonkman (HKSJ) sensitivity estimates
 meta_r <- function(r, n, k = 0) {
   z <- atanh(r); w <- n - 3 - k
   zp <- sum(w * z) / sum(w); se <- 1 / sqrt(sum(w))
@@ -92,10 +103,30 @@ meta_r <- function(r, n, k = 0) {
   # random-effects sensitivity (DerSimonian-Laird)
   tau2 <- if (df > 0) max(0, (Q - df) / (sum(w) - sum(w^2) / sum(w))) else 0
   wr <- 1 / (1 / w + tau2); zr <- sum(wr * z) / sum(wr); ser <- 1 / sqrt(sum(wr))
+  # HKSJ: t distribution with k - 1 df; modified so the SE is never below the DL SE
+  if (df > 0) {
+    se_hk <- max(sqrt(sum(wr * (z - zr)^2) / (df * sum(wr))), ser)
+    tq <- qt(0.975, df)
+    hk <- c(lo_HK = tanh(zr - tq * se_hk), hi_HK = tanh(zr + tq * se_hk), p_HK = 2 * pt(-abs(zr / se_hk), df))
+  } else hk <- c(lo_HK = NA, hi_HK = NA, p_HK = NA)
   c(r = tanh(zp), lo = tanh(zp - 1.96 * se), hi = tanh(zp + 1.96 * se),
     p = 2 * pnorm(-abs(zp / se)), Q_p = pchisq(Q, df, lower.tail = FALSE),
     I2 = ifelse(Q > 0, max(0, (Q - df) / Q), 0),
-    r_RE = tanh(zr), lo_RE = tanh(zr - 1.96 * ser), hi_RE = tanh(zr + 1.96 * ser), p_RE = 2 * pnorm(-abs(zr / ser)))
+    r_RE = tanh(zr), lo_RE = tanh(zr - 1.96 * ser), hi_RE = tanh(zr + 1.96 * ser), p_RE = 2 * pnorm(-abs(zr / ser)),
+    hk)
+}
+
+# Generic inverse-variance pooling (e.g. log hazard ratios): fixed effect, DL and HKSJ
+meta_generic <- function(est, se) {
+  w <- 1 / se^2; b <- sum(w * est) / sum(w); seF <- sqrt(1 / sum(w))
+  Q <- sum(w * (est - b)^2); df <- length(est) - 1
+  tau2 <- if (df > 0) max(0, (Q - df) / (sum(w) - sum(w^2) / sum(w))) else 0
+  wr <- 1 / (se^2 + tau2); br <- sum(wr * est) / sum(wr); seR <- sqrt(1 / sum(wr))
+  if (df > 0) { seH <- max(sqrt(sum(wr * (est - br)^2) / (df * sum(wr))), seR); tq <- qt(0.975, df) } else { seH <- NA; tq <- NA }
+  c(est = b, lo = b - 1.96 * seF, hi = b + 1.96 * seF, p = 2 * pnorm(-abs(b / seF)),
+    I2 = ifelse(Q > 0, max(0, (Q - df) / Q), 0),
+    est_RE = br, lo_RE = br - 1.96 * seR, hi_RE = br + 1.96 * seR,
+    lo_HK = br - tq * seH, hi_HK = br + tq * seH, p_HK = if (df > 0) 2 * pt(-abs(br / seH), df) else NA)
 }
 
 # ---------------------------------------------------------------------
@@ -161,7 +192,7 @@ assoc_one <- function(cohorts, x, y, Z) {
   if (is.null(per) || nrow(per) == 0) return(NULL)
   k <- length(Z)
   m <- meta_r(per$r, per$n, k)
-  if (nrow(per) == 1) { m["p"] <- per$p; m["I2"] <- NA; m["Q_p"] <- NA; m[c("r_RE", "lo_RE", "hi_RE", "p_RE")] <- NA }
+  if (nrow(per) == 1) { m["p"] <- per$p; m["I2"] <- NA; m["Q_p"] <- NA; m[c("r_RE", "lo_RE", "hi_RE", "p_RE", "lo_HK", "hi_HK", "p_HK")] <- NA }
   list(per = per, pooled = m, same_dir = length(unique(sign(per$r))) == 1)
 }
 
@@ -177,7 +208,8 @@ assoc_table <- function(cohorts, x, outcomes, models, family) {
                       r_pooled = a$pooled[["r"]], lo = a$pooled[["lo"]], hi = a$pooled[["hi"]],
                       p_pooled = a$pooled[["p"]], I2 = a$pooled[["I2"]], same_direction = a$same_dir,
                       r_RE = a$pooled[["r_RE"]], lo_RE = a$pooled[["lo_RE"]], hi_RE = a$pooled[["hi_RE"]],
-                      p_RE = a$pooled[["p_RE"]])
+                      p_RE = a$pooled[["p_RE"]],
+                      lo_HK = a$pooled[["lo_HK"]], hi_HK = a$pooled[["hi_HK"]], p_HK = a$pooled[["p_HK"]])
     for (i in seq_len(nrow(a$per))) {
       row[[paste0("r_", a$per$cohort[i])]] <- a$per$r[i]
       row[[paste0("p_", a$per$cohort[i])]] <- a$per$p[i]
@@ -201,7 +233,7 @@ print_assoc <- function(tab) {
     say("%-16s %-22s | %s | pooled r = %5.2f [%5.2f, %5.2f]  q = %-7s I2 = %3s%%  %s%s",
         t$outcome, t$model, per, t$r_pooled, t$lo, t$hi, fmt_p(t$q_pooled),
         ifelse(is.na(t$I2), " NA", sprintf("%3.0f", 100 * t$I2)), ifelse(isTRUE(t$robust), "ROBUST", ""),
-        ifelse(!is.na(t$I2) && t$I2 >= 0.5, sprintf("  [RE r = %.2f (%.2f, %.2f)]", t$r_RE, t$lo_RE, t$hi_RE), ""))
+        ifelse(!is.na(t$I2) && t$I2 >= 0.5, sprintf("  [RE r = %.2f, HKSJ 95%% CI %.2f to %.2f]", t$r_RE, t$lo_HK, t$hi_HK), ""))
   }
 }
 
@@ -270,4 +302,23 @@ forest_models <- function(tab, title, outcome_order = unique(tab$outcome)) {
 save_fig <- function(p, name, w, h) {
   ggsave(file.path(FIG_DIR, paste0(name, ".pdf")), p, width = w, height = h)
   ggsave(file.path(FIG_DIR, paste0(name, ".png")), p, width = w, height = h, dpi = 300)
+}
+
+# ---------------------------------------------------------------------
+# Run analysis sections with a log file (replaces run_all.R)
+# ---------------------------------------------------------------------
+run_logged <- function(log_file, sections) {
+  con <- file(log_file, open = "wt"); sink(con, split = TRUE)
+  on.exit({ sink(); close(con); message("Log written to ", log_file) }, add = TRUE)
+  cat("HMGA1 pipeline run:", format(Sys.time()), "\nWorking directory:", getwd(), "\n")
+  for (nm in names(sections)) {
+    cat("\n\n=====================================================================\n  ", nm,
+        "\n=====================================================================\n")
+    t0 <- Sys.time()
+    withCallingHandlers(sections[[nm]](),
+      warning = function(w) { cat("  [warning]", conditionMessage(w), "\n"); invokeRestart("muffleWarning") })
+    cat(sprintf("  (%s finished in %.1f min)\n", nm, as.numeric(difftime(Sys.time(), t0, units = "mins"))))
+  }
+  cat("\n\n---- sessionInfo ----\n"); print(sessionInfo())
+  cat("\nRun COMPLETED at", format(Sys.time()), "\n")
 }
