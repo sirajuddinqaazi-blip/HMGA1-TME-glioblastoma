@@ -1,5 +1,7 @@
 # HMGA1 and the immune microenvironment of IDH-wildtype glioblastoma
 
+Archived version (v2.0.0): https://doi.org/10.5281/zenodo.24375239
+
 Reproducible analysis pipeline for:
 
 > Siraj Ud Din. *HMGA1 expression is associated with CD276 (B7-H3) and macrophage-related signatures, but not with reduced immune content, in IDH-wildtype glioblastoma: a three-cohort and single-cell analysis.* (manuscript under submission)
