@@ -1,6 +1,7 @@
 # HMGA1 and the immune microenvironment of IDH-wildtype glioblastoma
 
-Archived version (v3.0.0): DOI to be added
+Archived version (v3.0.0): https://doi.org/10.5281/zenodo.24540662
+
 Previous version (v2.0.0): https://doi.org/10.5281/zenodo.24375239
 
 Reproducible analysis pipeline for:
